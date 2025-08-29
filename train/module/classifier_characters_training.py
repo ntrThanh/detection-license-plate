@@ -40,7 +40,7 @@ if __name__ == '__main__':
     os.makedirs(check_point_path, exist_ok=True)
 
     last_check_point = os.path.join(check_point_path, 'last_checkpoint.pth')
-    best_model_path = os.path.join(check_point_path, 'best_model.pth')
+    best_model_path = os.path.join(check_point_path, 'best_character_classification.pth')
 
     start_epoch = 0
     best_accuracy = 0

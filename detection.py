@@ -36,9 +36,9 @@ def print_decor(character):
 
 def get_model():
     model_CNN = model.model_cnn.ClassifierNumber(num_classes=len(os.listdir('./dataset/CNN letter Dataset')))
-    model_CNN.load_state_dict(torch.load('./checkpoint/best_model.pth', map_location=torch.device('cpu'))['state_dict'])
-    return (YOLO('./runs/detect/yolo detects license plate/weights/best.pt'),
-            YOLO('./runs/detect/yolo detects characters in license plate7/weights/best.pt'),
+    model_CNN.load_state_dict(torch.load('checkpoint/best_character_classification.pth', map_location=torch.device('cpu'))['state_dict'])
+    return (YOLO('checkpoint/best_detect_license.pt'),
+            YOLO('checkpoint/best_detect_character.pt'),
             model_CNN)
 
 def resize_keep_ratio(image, target_height=64):

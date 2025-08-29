@@ -10,8 +10,8 @@ from model.model_cnn import ClassifierNumber
 
 if __name__ == '__main__':
     path = '/home/trong-thanh/Downloads/OCR/images/train/1xemay915.jpg'
-    path_check_point_CNN = './checkpoint/best_model.pth'
-    path_check_point_YOLO = './runs/detect/yolo detects characters in license plate7/weights/best.pt'
+    path_check_point_CNN = 'checkpoint/best_character_classification.pth'
+    path_check_point_YOLO = 'runs/detect/yolo detects characters in license plate7/weights/best_detect_character.pt'
 
     # model yolo
     model_yolo = YOLO(path_check_point_YOLO)
