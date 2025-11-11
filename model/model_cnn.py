@@ -21,7 +21,7 @@ class ClassifierNumber(nn.Module):
     def __init__(self, num_classes):
         super().__init__()
 
-        # 🔹 Sửa lại đầu vào thành 1 kênh (ảnh trắng đen)
+        # Sửa lại đầu vào thành 1 kênh (ảnh trắng đen)
         self.cnn1 = make_blocks(1, 64, use_dropout=True)
         self.cnn2 = make_blocks(64, 128, use_dropout=True)
         self.cnn3 = make_blocks(128, 256, use_dropout=True)

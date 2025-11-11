@@ -1,117 +1,173 @@
-import argparse
+from typing import List, Optional, Tuple
 
-import cv2
-from ultralytics import YOLO
-from model_function import license_plate_to_text
 import torch
+import cv2
 import numpy as np
+from sklearn.cluster import KMeans
+from ultralytics import YOLO
 
 
-def get_args():
-    parser = argparse.ArgumentParser(description='Program detects license plates')
-    parser.add_argument('--image', '-i', help='Use image', action='store_true')
-    parser.add_argument('--path-image', '-p', help='Path to image', default='None', type=str)
-    parser.add_argument('--camera', '-c', help='Use Camera', action='store_true')
-    args = parser.parse_args()
-    return args
+class Format:
+    def __init__(self, min_num_chars=8, max_num_chars=9):
+        self.min_num_chars = min_num_chars
+        self.max_num_chars = max_num_chars
+
+    def license_plate_to_text(self, boxes_np: np.ndarray, characters_labels: list) -> str:
+        return ""
 
 
-def print_decor(character):
-    print()
-    for i in range(10):
-        print(f'{character}', end='')
+class KMeansFormat(Format):
+    def __init__(self, min_num_chars=8, max_num_chars=9):
+        super().__init__(min_num_chars, max_num_chars)
 
-    print(' ', end='')
-    print('Result', end=' ')
+    def license_plate_to_text(self, boxes_np: np.ndarray, characters_labels: list) -> str:
+        result_chars = []
+        num_chars = boxes_np.shape[0]
 
-    for i in range(10):
-        print(f'{character}', end='')
+        if not (self.min_num_chars <= num_chars <= self.max_num_chars):
+            return "Unknown"
 
-    print('\n')
+        x_centers = (boxes_np[:, 0] + boxes_np[:, 2]) / 2
+        y_centers = (boxes_np[:, 1] + boxes_np[:, 3]) / 2
+        heights = (boxes_np[:, 3] - boxes_np[:, 1])
+
+        if heights.size == 0:
+            return "Unknown"
+        avg_height = heights.mean()
+
+        kmeans = KMeans(n_clusters=2, n_init=10, random_state=0).fit(y_centers.reshape(-1, 1))
+        labels = kmeans.labels_
+
+        y_dist = abs(kmeans.cluster_centers_[0][0] - kmeans.cluster_centers_[1][0])
+
+        if y_dist < avg_height * 0.5:
+            sorted_indices = sorted(range(num_chars), key=lambda i: x_centers[i])
+            for idx in sorted_indices:
+                result_chars.append((str(characters_labels[idx])))
+        else:
+            cluster_info = [(i, kmeans.cluster_centers_[i][0]) for i in range(2)]
+            cluster_info.sort(key=lambda x: x[1])
+            top_cluster = cluster_info[0][0]
+            bottom_cluster = cluster_info[1][0]
+
+            top_indices = [i for i in range(num_chars) if labels[i] == top_cluster]
+            top_indices.sort(key=lambda i: x_centers[i])
+            for idx in top_indices:
+                result_chars.append((characters_labels[idx]))
+
+            bottom_indices = [i for i in range(num_chars) if labels[i] == bottom_cluster]
+            bottom_indices.sort(key=lambda i: x_centers[i])
+            for idx in bottom_indices:
+                result_chars.append((characters_labels[idx]))
+
+        return "".join(result_chars)
 
 
-def get_model():
-    return (YOLO('runs/detect/yolo detects license plate/weights/best.pt'),
-            YOLO('checkpoint/best_yolo_classified/best.pt'))
+class HeuristicFormat(Format):
 
+    def __init__(self, min_num_chars=8, max_num_chars=9):
+        super().__init__(min_num_chars, max_num_chars)
 
-# def resize_keep_ratio(image, target_height=64):
-#     h, w = image.shape[:2]
-#     scale = target_height / h
-#     new_w = int(w * scale)
-#     resized = cv2.resize(image, (new_w, target_height))
-#     return resized
+    def license_plate_to_text(self, boxes_np: np.ndarray, characters_labels: list) -> str:
 
-def up_constraint_threshold(image):
-    gray_image  = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    image = cv2.threshold(gray_image, 120, 255, cv2.THRESH_TRUNC)
+        num_chars = boxes_np.shape[0]
 
-    return image
+        if not (self.min_num_chars <= num_chars <= self.max_num_chars):
+            return "Unknown"
 
+        x_centers = (boxes_np[:, 0] + boxes_np[:, 2]) / 2
+        y_centers = (boxes_np[:, 1] + boxes_np[:, 3]) / 2
+        heights = (boxes_np[:, 3] - boxes_np[:, 1])
+
+        if heights.size == 0:
+            return "Unknown"
+        avg_height = heights.mean()
+
+        chars = []
+        for i in range(num_chars):
+            chars.append({
+                'x': x_centers[i],
+                'y': y_centers[i],
+                'label': str(characters_labels[i])
+            })
+
+        chars.sort(key=lambda c: c['y'])
+
+        max_y_gap = 0
+        split_index = -1
+        for i in range(num_chars - 1):
+            gap = chars[i + 1]['y'] - chars[i]['y']
+            if gap > max_y_gap:
+                max_y_gap = gap
+                split_index = i + 1
+
+        result_chars = []
+        if max_y_gap < avg_height * 0.5:
+            chars.sort(key=lambda c: c['x'])
+            result_chars = [c['label'] for c in chars]
+        else:
+            top_line = chars[:split_index]
+            bottom_line = chars[split_index:]
+
+            top_line.sort(key=lambda c: c['x'])
+            bottom_line.sort(key=lambda c: c['x'])
+
+            result_chars = [c['label'] for c in top_line] + [c['label'] for c in bottom_line]
+
+        return "".join(result_chars)
 
 
 def get_class_character(cls_id):
-    dic = {0: '1', 1: '2', 2: '3', 3: '4', 4: '5', 5: '6', 6: '7', 7: '8', 8: '9', 9: 'A', 10: 'B', 11: 'C', 12: 'D', 13: 'E',
-     14: 'F', 15: 'G', 16: 'H', 17: 'K', 18: 'L', 19: 'M', 20: 'N', 21: 'P', 22: 'S', 23: 'T', 24: 'U', 25: 'V',
-     26: 'X', 27: 'Y', 28: 'Z', 29: '0', 30: 'J', 31: 'Q', 32: 'R', 33: 'W', 34: 'I'}
+    dic = {0: '1', 1: '2', 2: '3', 3: '4', 4: '5', 5: '6', 6: '7', 7: '8', 8: '9', 9: 'A', 10: 'B', 11: 'C', 12: 'D',
+           13: 'E',
+           14: 'F', 15: 'G', 16: 'H', 17: 'K', 18: 'L', 19: 'M', 20: 'N', 21: 'P', 22: 'S', 23: 'T', 24: 'U', 25: 'V',
+           26: 'X', 27: 'Y', 28: 'Z', 29: '0', 30: 'J', 31: 'Q', 32: 'R', 33: 'W', 34: 'I'}
     return dic[cls_id]
 
 
-def detect_use_image(image_path):
-    list_license = []
-    model1, model2 = get_model()
+# version YOLO
+class DetectionLicensePlate:
+    def __init__(
+            self,
+            format_license_plate: Format = HeuristicFormat(min_num_chars=8, max_num_chars=9),
+            checkpoint_detect: str = "",
+            checkpoint_classify: str = ""
+    ):
+        self.license_plate = format_license_plate
+        self.checkpoint_detect = checkpoint_detect
+        self.checkpoint_classify = checkpoint_classify
 
-    image = cv2.imread(image_path)
-    image_detected_license_plate = model1(image)
+    def detect(self, image: np.ndarray) -> Tuple[List[str], np.ndarray]:
+        # List result (license plates)
+        list_license_plate = []
+        model_detect = YOLO(self.checkpoint_detect)
+        model_classify = YOLO(self.checkpoint_classify)
+        image_detected = model_detect(image)
 
-    for box in image_detected_license_plate[0].boxes:
-        x1, y1, x2, y2 = map(int, box.xyxy[0])
+        for box in image_detected[0].boxes:
+            # get coordinate and color rectangle
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
+            cv2.rectangle(image, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
-        cv2.rectangle(image, (x1, y1), (x2, y2), (255, 0, 0), 2)
-        image_crop = image[y1:y2, x1:x2]
-        # image_crop = resize_keep_ratio(image_crop, 100)
+            # cut image license after detected
+            image_crop = image[y1:y2, x1:x2]
+            if image_crop.size == 0:
+                continue
 
-        image_crop = image[y1:y2, x1:x2]
+            # resize to optimal receptive field
+            image_crop = cv2.resize(image_crop, (64, 64))
 
-        if image_crop.size == 0:
-            continue  # bỏ qua nếu crop lỗi
-        image_crop = cv2.resize(image_crop, (64, 64))  # hoặc resize_keep_ratio(image_crop, 100)
+            letters_image_detected = model_classify(image_crop)
+            boxes_characters = []
+            labels_characters = []
+            for char_box in letters_image_detected[0].boxes:
+                x1_c, y1_c, x2_c, y2_c = map(float, char_box.xyxy[0])
+                cls_id = int(char_box.cls[0])
+                label = get_class_character(cls_id)
+                boxes_characters.append([x1_c, y1_c, x2_c, y2_c])
+                labels_characters.append(label)
+            license_text = self.license_plate.license_plate_to_text(np.array(boxes_characters), labels_characters)
+            list_license_plate.append(license_text)
+            cv2.putText(image, license_text, (x1 - 15, y1 - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
 
-        image_detect = model2(image_crop)
-
-        boxes_characters = []
-        labels_characters = []
-
-        for char_box in image_detect[0].boxes:
-            x1_c, y1_c, x2_c, y2_c = map(float, char_box.xyxy[0])
-            cls_id = int(char_box.cls[0])
-            label = get_class_character(cls_id)
-
-            boxes_characters.append([x1_c, y1_c, x2_c, y2_c])
-            labels_characters.append(label)
-
-        boxes_tensor = torch.tensor(np.array(boxes_characters), dtype=torch.float32)
-
-        license_text = license_plate_to_text(boxes_tensor, labels_characters)
-        string_text = ''
-        for i in range(len(license_text)):
-            string_text += license_text[i]
-
-        cv2.putText(image, string_text, (x1 - 15, y1 - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
-        list_license.append(string_text)
-
-    cv2.imshow('image', image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
-    return list_license
-
-
-if __name__ == '__main__':
-    arguments = get_args()
-
-    if arguments.image and arguments.path_image:
-        list_license = detect_use_image(arguments.path_image)
-        for x in list_license:
-            print(x)
-
+        return list_license_plate, image
