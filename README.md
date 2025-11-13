@@ -83,7 +83,13 @@ python detection_cli.py -i -p <path_to_file>
 ## Example
 
 This is a example:
-![Example](assets/image/example_1.png)
+![Example](assets/image/image_4.png)
+![Example](assets/image/image_1.png)
+
+![Example](assets/image/image_2.png)
+
+![Example](assets/image/image_3.png)
+
 
 ## Project limitations
 

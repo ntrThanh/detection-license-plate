@@ -124,6 +124,20 @@ def get_class_character(cls_id):
            26: 'X', 27: 'Y', 28: 'Z', 29: '0', 30: 'J', 31: 'Q', 32: 'R', 33: 'W', 34: 'I'}
     return dic[cls_id]
 
+def resize_with_aspect_ratio(image, target_size=64, pad_color=(0, 0, 0)):
+    h, w = image.shape[:2]
+    scale = target_size / max(h, w)
+    new_w, new_h = int(w * scale), int(h * scale)
+
+    resized = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    result = np.full((target_size, target_size, 3), pad_color, dtype=np.uint8)
+
+    x_offset = (target_size - new_w) // 2
+    y_offset = (target_size - new_h) // 2
+
+    result[y_offset:y_offset+new_h, x_offset:x_offset+new_w] = resized
+    return result
+
 
 # version YOLO
 class DetectionLicensePlate:
@@ -150,12 +164,15 @@ class DetectionLicensePlate:
             cv2.rectangle(image, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
             # cut image license after detected
+            if not image:
+                print('Can\'t read image!!!')
+                break
             image_crop = image[y1:y2, x1:x2]
             if image_crop.size == 0:
                 continue
 
             # resize to optimal receptive field
-            image_crop = cv2.resize(image_crop, (64, 64))
+            image_crop = resize_with_aspect_ratio(image_crop, target_size=64)
 
             letters_image_detected = model_classify(image_crop)
             boxes_characters = []

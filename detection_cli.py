@@ -102,7 +102,7 @@ def get_args():
 if __name__ == '__main__':
     # arguments = get_args()
 
-    path_image = '/home/trong-thanh/Downloads/greenpack_0016.png'
+    path_image = '/home/trong-thanh/Pictures/Screenshots/Screenshot%20from%202025-11-13%2010-06-18.png'
 
     image = cv2.imread(path_image)
     model = DetectionLicensePlate(
