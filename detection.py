@@ -1,26 +1,32 @@
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
-import torch
 import cv2
 import numpy as np
 from sklearn.cluster import KMeans
 from ultralytics import YOLO
 
-
+# ---- Define class format ---- #
 class Format:
-    def __init__(self, min_num_chars=8, max_num_chars=9):
+    def __init__(self,
+                 min_num_chars=8,
+                 max_num_chars=9):
         self.min_num_chars = min_num_chars
         self.max_num_chars = max_num_chars
 
-    def license_plate_to_text(self, boxes_np: np.ndarray, characters_labels: list) -> str:
+    def license_plate_to_text(self,
+                              boxes_np: np.ndarray,
+                              characters_labels: list
+                              ) -> str:
         return ""
-
 
 class KMeansFormat(Format):
     def __init__(self, min_num_chars=8, max_num_chars=9):
         super().__init__(min_num_chars, max_num_chars)
 
-    def license_plate_to_text(self, boxes_np: np.ndarray, characters_labels: list) -> str:
+    def license_plate_to_text(self,
+                              boxes_np: np.ndarray,
+                              characters_labels: list
+                              ) -> str:
         result_chars = []
         num_chars = boxes_np.shape[0]
 
@@ -65,10 +71,16 @@ class KMeansFormat(Format):
 
 class HeuristicFormat(Format):
 
-    def __init__(self, min_num_chars=8, max_num_chars=9):
+    def __init__(self,
+                 min_num_chars=8,
+                 max_num_chars=9
+                 ):
         super().__init__(min_num_chars, max_num_chars)
 
-    def license_plate_to_text(self, boxes_np: np.ndarray, characters_labels: list) -> str:
+    def license_plate_to_text(self,
+                              boxes_np: np.ndarray,
+                              characters_labels: list
+                              ) -> str:
 
         num_chars = boxes_np.shape[0]
 
@@ -84,6 +96,7 @@ class HeuristicFormat(Format):
         avg_height = heights.mean()
 
         chars = []
+
         for i in range(num_chars):
             chars.append({
                 'x': x_centers[i],
@@ -95,6 +108,7 @@ class HeuristicFormat(Format):
 
         max_y_gap = 0
         split_index = -1
+
         for i in range(num_chars - 1):
             gap = chars[i + 1]['y'] - chars[i]['y']
             if gap > max_y_gap:
@@ -118,24 +132,40 @@ class HeuristicFormat(Format):
 
 
 def get_class_character(cls_id):
-    dic = {0: '1', 1: '2', 2: '3', 3: '4', 4: '5', 5: '6', 6: '7', 7: '8', 8: '9', 9: 'A', 10: 'B', 11: 'C', 12: 'D',
-           13: 'E',
-           14: 'F', 15: 'G', 16: 'H', 17: 'K', 18: 'L', 19: 'M', 20: 'N', 21: 'P', 22: 'S', 23: 'T', 24: 'U', 25: 'V',
-           26: 'X', 27: 'Y', 28: 'Z', 29: '0', 30: 'J', 31: 'Q', 32: 'R', 33: 'W', 34: 'I'}
+    dic = {0: '1', 1: '2', 2: '3', 3: '4', 4: '5',
+           5: '6', 6: '7', 7: '8', 8: '9', 9: 'A',
+           10: 'B', 11: 'C', 12: 'D', 13: 'E', 14: 'F',
+           15: 'G', 16: 'H', 17: 'K', 18: 'L', 19: 'M',
+           20: 'N', 21: 'P', 22: 'S', 23: 'T', 24: 'U',
+           25: 'V', 26: 'X', 27: 'Y', 28: 'Z', 29: '0',
+           30: 'J', 31: 'Q', 32: 'R', 33: 'W', 34: 'I'}
     return dic[cls_id]
 
-def resize_with_aspect_ratio(image, target_size=64, pad_color=(0, 0, 0)):
+
+def resize_with_aspect_ratio(
+        image,
+        target_size=64,
+        pad_color=(0, 0, 0)):
     h, w = image.shape[:2]
     scale = target_size / max(h, w)
     new_w, new_h = int(w * scale), int(h * scale)
 
-    resized = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
-    result = np.full((target_size, target_size, 3), pad_color, dtype=np.uint8)
+    resized = cv2.resize(
+        image,
+        (new_w, new_h),
+        interpolation=cv2.INTER_AREA
+    )
+
+    result = np.full(
+        (target_size, target_size, 3),
+        pad_color,
+        dtype=np.uint8
+    )
 
     x_offset = (target_size - new_w) // 2
     y_offset = (target_size - new_h) // 2
 
-    result[y_offset:y_offset+new_h, x_offset:x_offset+new_w] = resized
+    result[y_offset:y_offset + new_h, x_offset:x_offset + new_w] = resized
     return result
 
 
@@ -143,7 +173,10 @@ def resize_with_aspect_ratio(image, target_size=64, pad_color=(0, 0, 0)):
 class DetectionLicensePlate:
     def __init__(
             self,
-            format_license_plate: Format = HeuristicFormat(min_num_chars=8, max_num_chars=9),
+            format_license_plate: Format = HeuristicFormat(
+                min_num_chars=8,
+                max_num_chars=9
+            ),
             checkpoint_detect: str = "",
             checkpoint_classify: str = ""
     ):
@@ -151,7 +184,10 @@ class DetectionLicensePlate:
         self.checkpoint_detect = checkpoint_detect
         self.checkpoint_classify = checkpoint_classify
 
-    def detect(self, image: np.ndarray) -> Tuple[List[str], np.ndarray]:
+    def detect(self,
+               image: np.ndarray
+               ) -> Tuple[List[str], np.ndarray]:
+
         # List result (license plates)
         list_license_plate = []
         model_detect = YOLO(self.checkpoint_detect)
@@ -164,7 +200,7 @@ class DetectionLicensePlate:
             cv2.rectangle(image, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
             # cut image license after detected
-            if not image:
+            if image is None:
                 print('Can\'t read image!!!')
                 break
             image_crop = image[y1:y2, x1:x2]
@@ -177,14 +213,27 @@ class DetectionLicensePlate:
             letters_image_detected = model_classify(image_crop)
             boxes_characters = []
             labels_characters = []
+
             for char_box in letters_image_detected[0].boxes:
                 x1_c, y1_c, x2_c, y2_c = map(float, char_box.xyxy[0])
                 cls_id = int(char_box.cls[0])
                 label = get_class_character(cls_id)
                 boxes_characters.append([x1_c, y1_c, x2_c, y2_c])
                 labels_characters.append(label)
-            license_text = self.license_plate.license_plate_to_text(np.array(boxes_characters), labels_characters)
+
+            license_text = self.license_plate.license_plate_to_text(
+                np.array(boxes_characters),
+                labels_characters
+            )
+
             list_license_plate.append(license_text)
-            cv2.putText(image, license_text, (x1 - 15, y1 - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
+            cv2.putText(
+                image,
+                license_text,
+                (x1 - 15, y1 - 15),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (255, 255, 0),
+                1)
 
         return list_license_plate, image

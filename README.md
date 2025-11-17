@@ -33,7 +33,7 @@ Benefit of this program is:
 ## Pipeline
 
 ```text
-Input -> Yolo -> Yolo Classified Letter -> K-means -> Result
+Input -> Yolo detect license plate -> Yolo classified letter -> Format  (K-Means/Heuristic Format) -> Result
 ```
 
 ## Install
@@ -64,26 +64,25 @@ Run program, you can run by `CLI` or use function `detect_use_image(image_path)`
 
 #### Use command line interface
 
+
 ```commandline
-python detection_cli.py -i -p <path_to_file>
+python detection_cli.py arguments
 ```
 
 **Arguments:**
 
 - `-i`, `--image`       : Detect objects in a single image file.
-- `-p`, `--path-image`  : Path to the input image.
 - `-c`, `--camera`      : Perform real-time detection using a camera.
-
-#### Function:
-
-- Function `detect_use_image(image_path)` in `detection.py` must have input is image can be `.png`, `.jpg`,..., The
-  return type is a 2D.
-  list of license plates.
+- `-v`, `--video`       : Detect objects in a video file.
+- `-cdt`, `--checkpoint-detect`: Path to the YOLO detection checkpoint.
+- `cclf`, `--checkpoint-classify`: Path to the YOLO classification checkpoint.
 
 ## Example
 
-This is a example:
+These are examples:
+
 ![Example](assets/image/image_4.png)
+
 ![Example](assets/image/image_1.png)
 
 ![Example](assets/image/image_2.png)
@@ -91,18 +90,35 @@ This is a example:
 ![Example](assets/image/image_3.png)
 
 
-## Project limitations
+## Project Status
 
-- Dataset is not perfect to train so model has overfitting.
-- I have many mistakes, It is make plane, resize image, setup data is so bad and more..
-- Only detect license plate with background is white and character is black (I will fix it in the future).
+All previously existing issues in the project have been resolved.
+The dataset has been improved, preprocessing has been corrected, and the detection–classification pipeline has been fully refined.
+The model now performs robustly on various types of license plates and diverse backgrounds.
 
-## Future
+## Improvements
 
-- I will retrain these model if i find new perfect dataset.
-- Clean this code, make it is useful, easy to use,..
-- Integrate into camera for enhance security, web api,..
-- If you have idea, please tell me via email: **nguyentrongthanh672@gmail.com**.
+- Reworked and cleaned the entire dataset for better training quality.
+
+- Fixed all preprocessing steps including plane transformation, resizing, and data setup.
+
+- Retrained the detection and classification models to eliminate overfitting.
+
+- Model now supports multiple license plate styles, backgrounds, and lighting conditions.
+
+- Optimized the codebase to be cleaner, more stable, and easier to use or extend.
+
+## Future Plans
+
+- Continue collecting and labeling more high-quality data to further improve accuracy.
+
+- Add more advanced features such as tracking, OCR enhancement, and multi-camera support.
+
+- Publish the project as a standalone module, API service, or camera-integrated security system.
+
+- Expand compatibility with web platforms, mobile apps, and IoT devices.
+
+- If you have any ideas or contributions, feel free to contact me at: nguyentrongthanh672@gmail.com
 
 ## Reference
 
