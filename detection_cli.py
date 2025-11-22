@@ -62,6 +62,9 @@ def use_image(path_to_image, model):
     cv2.destroyAllWindows()
 
 
+import cv2
+import time
+
 def use_video(path_to_video, model):
     cap = cv2.VideoCapture(path_to_video)
 
@@ -69,23 +72,38 @@ def use_video(path_to_video, model):
         print("Cannot open video.")
         return
 
+    prev_time = time.time()
+
     while True:
         ret, frame = cap.read()
         if not ret:
             break
 
-        _, image_out = model.detect(frame)
+        current_time = time.time()
+        fps = 1 / (current_time - prev_time)
+        prev_time = current_time
 
-        cv2.imshow(
-            "Video",
-            image_out if image_out is not None else frame
+        _, image_out = model.detect(frame)
+        output = image_out if image_out is not None else frame
+
+        cv2.putText(
+            output,
+            f"FPS: {fps:.2f}",
+            (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.9,
+            (0, 255, 0),
+            2
         )
+
+        cv2.imshow("Video", output)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
     cap.release()
     cv2.destroyAllWindows()
+
 
 
 def use_camera(model, cam_id=0):
@@ -95,17 +113,31 @@ def use_camera(model, cam_id=0):
         print("Cannot open camera.")
         return
 
+    prev_time = time.time()
+
     while True:
         ret, frame = cap.read()
         if not ret:
             break
 
-        _, image_out = model.detect(frame)
+        current_time = time.time()
+        fps = 1 / (current_time - prev_time)
+        prev_time = current_time
 
-        cv2.imshow(
-            "Camera",
-            image_out if image_out is not None else frame
+        _, image_out = model.detect(frame)
+        output = image_out if image_out is not None else frame
+
+        cv2.putText(
+            output,
+            f"FPS: {fps:.2f}",
+            (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.9,
+            (0, 255, 0),
+            2
         )
+
+        cv2.imshow("Camera", output)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

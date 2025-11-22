@@ -176,7 +176,8 @@ def get_class_character(cls_id):
 def resize_with_aspect_ratio(
         image,
         target_size=64,
-        pad_color=(0, 0, 0)):
+        pad_color=(0, 0, 0)
+):
     h, w = image.shape[:2]
     scale = target_size / max(h, w)
     new_w, new_h = int(w * scale), int(h * scale)
@@ -249,7 +250,7 @@ class DetectionLicensePlate:
             self,
             format_license_plate: Format = HeuristicFormat(
                 min_num_chars=8,
-                max_num_chars=9
+                max_num_chars=10
             ),
             checkpoint_detect: str = "",
             checkpoint_classify: str = ""
@@ -321,7 +322,7 @@ class DetectionLicensePlate:
                 (x1 - 15, y1 - 15),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.5,
-                (0, 0, 255),
+                (0,255,0),
                 1
             )
 
